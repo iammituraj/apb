@@ -2,9 +2,9 @@
 APB master and slave developed in Verilog/System Verilog.
 
 ## Source codes included
--- apb_master: APB master
+-- _apb_master_: APB master
 
--- apb_slave: APB slave
+-- _apb_slave_: APB slave
 
 ## Comments
 All source codes are fully synthesizable and tested. All source codes are open-source, free to use, modify, and distribute without any conflicts of interest with the original developer.
