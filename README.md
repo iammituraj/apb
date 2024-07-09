@@ -1,5 +1,5 @@
 # apb
-APB master developed in Verilog/System Verilog.
+APB master and slave developed in Verilog/System Verilog.
 
 ## Source codes included
 -- apb_master: APB master
