@@ -76,7 +76,7 @@ localparam N_REG    = 2**(AW-ADDR_LSB) ;  // Max. no of registers supported in t
 //   6) <RFU>
 //       ...
 //-----------------------------------------------------------------------------------
-logic [DW-1:0] apb_reg[4] ; 
+logic [DW-1:0] apb_reg[5] ; 
 
 // Read/write errors
 logic wr_err, rd_err ;
