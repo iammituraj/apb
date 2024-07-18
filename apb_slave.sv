@@ -8,7 +8,7 @@
 //----%% Module Name      : APB Slave                                          
 //----%% Developer        : Mitu Raj, chip@chipmunklogic.com
 //----%%
-//----%% Description      : APB slave which implements register address map for a HW.
+//----%% Description      : APB slave wrapper which implements register address map for a HW.
 //----%%                    Write access: 2-cycle
 //----%%                    Read access : 3-cycle
 //----%%
