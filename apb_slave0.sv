@@ -24,7 +24,7 @@ module apb_slave #(
    parameter AW = 5  ,  // Address width; max. 32 as per APB spec
 
    // Derived Parameters
-   localparam SW = $ceil(DW/8)  // Strobe width
+   localparam SW = int'($ceil(DW/8))  // Strobe width
 )
 (
    // Clock and Reset
@@ -79,6 +79,7 @@ logic [DW-1:0] apb_reg[5] ;
 
 // Read/write errors
 logic wr_err, rd_err ;
+logic [AW-1-ADDR_LSB:0] paddr ;
 
 // Read/write requests
 logic req_rd, req_write ;
@@ -115,7 +116,7 @@ always @(posedge pclk) begin
          end
          
          // Write Access State : writes addressed-register
-         WR_ACCESS : begin             
+         W_ACCESS : begin             
             // psel and pwrite expected to be stable and penable to be asserted for successful write               
             if (req_wr && i_penable) begin
                // Address decoding with LSbs masked
@@ -147,7 +148,7 @@ always_comb begin
    // psel and pwrite expected to be stable and penable to be asserted for successful read               
    if (req_rd && i_penable) begin
       // Address decoding with LSbs masked
-      case (i_paddr [AW-1:ADDR_LSB])
+      case (paddr)
          0       : o_prdata = apb_reg[0] ;                     
          2       : o_prdata = apb_reg[2] ;
          3       : o_prdata = apb_reg[3] ;
@@ -160,6 +161,9 @@ always_comb begin
    end
 end
 
+// Word address
+assign paddr = i_paddr [AW-1:ADDR_LSB] ;
+
 // Assign all RO/RO+ registers
 assign apb_reg[3] = 32'hDEAD_BEEF ;  // Constant value
 assign apb_reg[4] = i_hw_sts      ;  // Driven by HW interface status signal...
@@ -168,8 +172,8 @@ assign apb_reg[4] = i_hw_sts      ;  // Driven by HW interface status signal...
 assign o_hw_ctl = apb_reg[0] ;
 
 // Slave error conditions
-assign wr_err    = (state_ff == IDLE)     && req_wr && (i_paddr[AW-1:ADDR_LSB] == 3 || i_paddr[AW-1:ADDR_LSB] == 4);  // Write request to read-only registers = ERROR
-assign rd_err    = (state_ff == R_ACCESS) && req_rd && (i_paddr[AW-1:ADDR_LSB] == 1);                                 // Read request to write-only registers = ERROR
+assign wr_err    = (state_ff == W_ACCESS) && req_wr && (paddr == 3 || paddr == 4);  // Write request to read-only registers = ERROR
+assign rd_err    = (state_ff == R_ACCESS) && req_rd && (paddr == 1);                                 // Read request to write-only registers = ERROR
 assign o_pslverr = wr_err | rd_err ;
 
 endmodule

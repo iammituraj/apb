@@ -24,7 +24,7 @@ module apb_slave #(
    parameter AW = 5  ,  // Address width; max. 32 as per APB spec
 
    // Derived Parameters
-   localparam SW = $ceil(DW/8)  // Strobe width
+   localparam SW = int'($ceil(DW/8))  // Strobe width
 )
 (
    // Clock and Reset
