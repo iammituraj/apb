@@ -173,7 +173,7 @@ assign o_hw_ctl = apb_reg[0] ;
 
 // Slave error conditions
 assign wr_err    = (state_ff == W_ACCESS) && req_wr && (paddr == 3 || paddr == 4);  // Write request to read-only registers = ERROR
-assign rd_err    = (state_ff == R_ACCESS) && req_rd && (paddr == 1);                                 // Read request to write-only registers = ERROR
+assign rd_err    = (state_ff == R_ACCESS) && req_rd && (paddr == 1);                // Read request to write-only registers = ERROR
 assign o_pslverr = wr_err | rd_err ;
 
 endmodule
