@@ -82,7 +82,7 @@ logic [DW-1:0] apb_reg[5] ;
 logic wr_err, rd_err ;
 
 // Read/write requests
-logic req_rd, req_write ;
+logic req_rd, req_wr ;
 assign req_rd = i_psel && ~i_pwrite ;
 assign req_wr = i_psel &&  i_pwrite ;
 
