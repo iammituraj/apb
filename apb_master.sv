@@ -22,7 +22,7 @@ module apb_master #(
    parameter AW = 8  ,  // Address width; max. 32 as per APB spec
 
    // Derived Parameters
-   localparam SW = $ceil(DW/8)      ,  // Strobe width
+   localparam SW = int'($ceil(DW/8)),  // Strobe width
    localparam CW = 1 + SW + DW + AW ,  // Command width  {pwrite, pstrb, pwdata, paddr}  
    localparam RW = 1 + DW              // Response width {pslverr, prdata}
 )
@@ -82,8 +82,8 @@ always_ff @(posedge pclk or negedge presetn) begin
 end
 always_comb begin
    case (state_ff)
-      IDLE    : nxt_state =   (i_valid)? ACCESS : IDLE ;
-      ACCESS  : nxt_state = (!i_pready)? ACCESS : IDLE ;
+      IDLE    : nxt_state = state_t'((i_valid)? ACCESS : IDLE)   ;
+      ACCESS  : nxt_state = state_t'((!i_pready)? ACCESS : IDLE) ;
       default : nxt_state = state_ff ;
    endcase
 end

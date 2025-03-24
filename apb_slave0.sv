@@ -8,9 +8,9 @@
 //----%% Module Name      : APB Slave                                          
 //----%% Developer        : Mitu Raj, chip@chipmunklogic.com
 //----%%
-//----%% Description      : APB slave which implements register address map for a HW. Read access has one wait state. Write access has 0 wait state.
+//----%% Description      : APB slave which implements register address map for a HW. Both write and read access have 0 wait states.
 //----%%                    Write access: 2-cycle
-//----%%                    Read access : 3-cycle
+//----%%                    Read access : 2-cycle
 //----%%
 //----%% Last modified on : July-2024                                                                                        
 //----%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -52,8 +52,7 @@ typedef enum logic [1:0]
 {
    IDLE     = 2'b00 , 
    W_ACCESS = 2'b01 , 
-   R_ACCESS = 2'b10 ,
-   R_FINISH = 2'b11
+   R_ACCESS = 2'b10 
 }  state_t ;
 // State register
 state_t state_ff ;
@@ -80,6 +79,7 @@ logic [DW-1:0] apb_reg[5] ;
 
 // Read/write errors
 logic wr_err, rd_err ;
+logic [AW-1-ADDR_LSB:0] paddr ;
 
 // Read/write requests
 logic req_rd, req_write ;
@@ -96,7 +96,6 @@ always @(posedge pclk) begin
       apb_reg[1] <= '0 ;
       apb_reg[2] <= '0 ;       
       // APB read ports
-      o_prdata <= '0   ;
       o_pready <= 1'b0 ;
    end   
    // Out of reset
@@ -111,7 +110,7 @@ always @(posedge pclk) begin
                state_ff <= W_ACCESS ;    // Write access required
             end       
             else if (req_rd) begin
-               o_pready <= 1'b0     ;    // Read access has wait states
+               o_pready <= 1'b1     ;    // Read access has no wait states
                state_ff <= R_ACCESS ;    // Read access required  
             end           
          end
@@ -133,29 +132,9 @@ always @(posedge pclk) begin
          end
          
          // Read Access State : reads addressed-register
-         R_ACCESS : begin                   
-            // psel and pwrite expected to be stable and penable to be asserted for successful read               
-            if (req_rd && i_penable) begin
-               // Address decoding with LSbs masked
-               case (i_paddr [AW-1:ADDR_LSB])
-                  0       : o_prdata <= apb_reg[0] ;                     
-                  2       : o_prdata <= apb_reg[2] ;
-                  3       : o_prdata <= apb_reg[3] ;
-                  4       : o_prdata <= apb_reg[4] ;
-                  default : o_prdata <= '0         ;  // All invalid addresses, write-only registers are read as 0                 
-               endcase         
-            end
-            else begin
-               o_prdata <= '0 ;  // Send 0s on unsuccessful read
-            end
-            o_pready <= 1'b1     ;  // Induces one wait state
-            state_ff <= R_FINISH ; 
-         end
-         
-         // Read Finish state : All read accesses finish here          
-         R_FINISH : begin              
+         R_ACCESS : begin                  
             o_pready <= 1'b0 ;
-            state_ff <= IDLE ;            
+            state_ff <= IDLE ; 
          end
 
          default : ;         
@@ -163,6 +142,27 @@ always @(posedge pclk) begin
       endcase 
    end
 end
+
+// Read data mux
+always_comb begin
+   // psel and pwrite expected to be stable and penable to be asserted for successful read               
+   if (req_rd && i_penable) begin
+      // Address decoding with LSbs masked
+      case (paddr)
+         0       : o_prdata = apb_reg[0] ;                     
+         2       : o_prdata = apb_reg[2] ;
+         3       : o_prdata = apb_reg[3] ;
+         4       : o_prdata = apb_reg[4] ;
+         default : o_prdata = '0         ;  // All invalid addresses, write-only registers are read as 0                 
+      endcase         
+   end
+   else begin
+      o_prdata = '0 ;  // Send 0s on unsuccessful read
+   end
+end
+
+// Word address
+assign paddr = i_paddr [AW-1:ADDR_LSB] ;
 
 // Assign all RO/RO+ registers
 assign apb_reg[3] = 32'hDEAD_BEEF ;  // Constant value
@@ -172,20 +172,9 @@ assign apb_reg[4] = i_hw_sts      ;  // Driven by HW interface status signal...
 assign o_hw_ctl = apb_reg[0] ;
 
 // Slave error conditions
-assign wr_err    = (state_ff == IDLE)     && req_wr && (i_paddr[AW-1:ADDR_LSB] == 3 || i_paddr[AW-1:ADDR_LSB] == 4);  // Write request to read-only registers = ERROR
-assign rd_err    = (state_ff == R_ACCESS) && req_rd && (i_paddr[AW-1:ADDR_LSB] == 1);                                 // Read request to write-only registers = ERROR
-
-// Register the Slave error
-always @(posedge pclk) begin   
-   // Reset  
-   if (!presetn) begin      
-      o_pslverr <= 1'b0 ;
-   end   
-   // Out of reset
-   else begin
-      o_pslverr <= wr_err | rd_err ; 
-   end
-end
+assign wr_err    = (state_ff == W_ACCESS) && req_wr && (paddr == 3 || paddr == 4);  // Write request to read-only registers = ERROR
+assign rd_err    = (state_ff == R_ACCESS) && req_rd && (paddr == 1);                // Read request to write-only registers = ERROR
+assign o_pslverr = wr_err | rd_err ;
 
 endmodule
 //###################################################################################################################################################
